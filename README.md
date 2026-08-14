@@ -86,6 +86,41 @@ import { buildContextPack, tailTruncate } from './src/index.js';
 const pack = buildContextPack(files, 'authentication', 500, { truncate: tailTruncate });
 ```
 
+## Example
+
+`examples/basic.js` is a small, runnable script that shows how a real caller
+uses the public API end to end: it discovers files under
+`fixtures/sample-repo` from disk (`buildContextPack` itself never touches the
+filesystem - see `## Design notes`), then packs them against a query and
+prints what was included, truncated, or excluded, and why.
+
+```bash
+npm run example
+# or with a custom query and budget:
+node examples/basic.js "billing invoice" 80
+```
+
+## Public API
+
+Everything below is exported from `src/index.js`:
+
+- `buildContextPack(files, query, budgetTokens, options?)` - the top-level
+  function documented in `## Usage`; scores and allocates in one call.
+- `scoreRepo(files, queryTerms)` / `scoreFile(file, queryTerms)` /
+  `normalizeQuery(query)` - the scoring stage on its own, for callers who
+  want scores without allocation.
+- `allocate(scoredFiles, budgetTokens, options?)` - the allocation stage on
+  its own, for callers who want to plug in their own scorer.
+- `headTruncate` / `tailTruncate` / `summaryTruncate` - the built-in
+  truncation strategies, each usable directly or via `options.truncate`.
+- `buildImportGraph(files)` / `extractImportSpecifiers(content)` /
+  `resolveImportPath(fromPath, specifier, knownPaths)` - the import-graph
+  signal `scoreRepo` uses internally, exposed for callers who want it
+  standalone.
+- `estimateTokens(text)` / `tokenCount(text)` - the token estimator
+  `allocate` and the truncation strategies use internally (both names refer
+  to the same function; `tokenCount` is the public-facing alias).
+
 ## Status
 
 Built autonomously with [Claude Code](https://claude.com/claude-code) and
@@ -94,9 +129,10 @@ before being committed, including a golden-file test that pins the exact
 score/allocation output for a fixture repository (`fixtures/sample-repo/`).
 
 This covers the core score+allocate algorithm, the heuristic relevance
-scorer (keywords, imports, recency), and pluggable truncation (head/tail/
-summary). Discovering files from a real filesystem and a CLI/config surface
-are not implemented yet.
+scorer (keywords, imports, recency), pluggable truncation (head/tail/
+summary), and a stable public API with a runnable, filesystem-backed example
+(`examples/basic.js`, see `## Example`). A CLI/config surface is not
+implemented yet.
 
 ## Design notes
 

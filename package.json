@@ -8,7 +8,8 @@
     ".": "./src/index.js"
   },
   "scripts": {
-    "test": "node --test test/"
+    "test": "node --test test/",
+    "example": "node examples/basic.js"
   },
   "engines": {
     "node": ">=18"
