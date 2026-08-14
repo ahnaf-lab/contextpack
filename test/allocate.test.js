@@ -88,14 +88,8 @@ test('allocate accepts a custom truncation strategy', () => {
   assert.equal(result.included[0].content.endsWith('tail'), true);
 });
 
-test('headTruncate never returns more tokens than requested', () => {
+test('allocate still exposes headTruncate for backward compatibility', () => {
   const { content, tokens } = headTruncate('the quick brown fox jumps over the lazy dog', 3);
   assert.ok(tokens <= 3);
   assert.equal(estimateTokens(content), tokens);
-});
-
-test('headTruncate returns empty content for a zero budget', () => {
-  const { content, tokens } = headTruncate('anything', 0);
-  assert.equal(content, '');
-  assert.equal(tokens, 0);
 });

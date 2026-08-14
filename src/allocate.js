@@ -1,39 +1,11 @@
 import { estimateTokens } from './tokenize.js';
+import { headTruncate, DEFAULT_MIN_TRUNCATE_TOKENS } from './truncate.js';
 
-// Files smaller than this many tokens are never worth truncating - the
-// remaining slice would be too small to carry any useful context, so it is
-// better to spend the budget on a fuller file elsewhere.
-const DEFAULT_MIN_TRUNCATE_TOKENS = 20;
-
-/**
- * Default truncation strategy: keep the head of the file and cut the rest.
- *
- * Truncation strategies are pluggable (see `allocate`'s `truncate` option) -
- * this "head" strategy is the sensible default because file headers
- * (imports, top-level docstrings, function signatures) tend to carry the
- * highest information density per token in source files.
- *
- * @param {string} content
- * @param {number} maxTokens
- * @returns {{content: string, tokens: number}}
- */
-export function headTruncate(content, maxTokens) {
-  if (maxTokens <= 0) return { content: '', tokens: 0 };
-
-  const approxCharsPerToken = 4;
-  let sliced = content.slice(0, maxTokens * approxCharsPerToken);
-  let tokens = estimateTokens(sliced);
-
-  // The chars/4 estimate is approximate, so trim in small steps until the
-  // slice actually fits the budget - this keeps allocate()'s bookkeeping
-  // exact instead of merely "close".
-  while (tokens > maxTokens && sliced.length > 0) {
-    sliced = sliced.slice(0, Math.max(0, sliced.length - approxCharsPerToken));
-    tokens = estimateTokens(sliced);
-  }
-
-  return { content: sliced, tokens };
-}
+// Re-exported so existing callers of `allocate.js` keep working - the
+// strategies themselves now live in `truncate.js` alongside `tailTruncate`
+// and `summaryTruncate`, which have no reason to be reachable through this
+// module.
+export { headTruncate };
 
 function compareForAllocation(a, b) {
   if (b.score !== a.score) return b.score - a.score;

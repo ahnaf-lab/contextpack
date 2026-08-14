@@ -3,7 +3,8 @@ import { allocate } from './allocate.js';
 import { estimateTokens } from './tokenize.js';
 
 export { scoreFile, scoreRepo, normalizeQuery } from './score.js';
-export { allocate, headTruncate } from './allocate.js';
+export { allocate } from './allocate.js';
+export { headTruncate, tailTruncate, summaryTruncate } from './truncate.js';
 export { estimateTokens } from './tokenize.js';
 export { extractImportSpecifiers, resolveImportPath, buildImportGraph } from './imports.js';
 

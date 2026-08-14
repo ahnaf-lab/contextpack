@@ -67,8 +67,24 @@ console.log(pack.remaining); // unused tokens left in the budget
    large enough to be useful, or excluded with a stated `reason` otherwise.
 
 Truncation is pluggable - pass `{ truncate: (content, maxTokens) => ({ content, tokens }) }`
-to use a different strategy than the default `headTruncate` (keep the start
-of the file, drop the rest).
+to `buildContextPack`'s `options` (or `allocate` directly) to use a different
+strategy than the default. `src/truncate.js` ships three, each unit-tested
+independently in `test/truncate.test.js`:
+
+- `headTruncate` (default) - keep the start of the file, drop the rest.
+- `tailTruncate` - keep the end of the file, drop the start; useful for
+  files where the signal is at the bottom, like a changelog or log file.
+- `summaryTruncate` - keep both the start and end, joined by a
+  `/* ... truncated ... */` marker, splitting the budget between them. Most
+  source files carry their structure (imports, top-level declarations,
+  exports) at the two ends rather than in the middle, so this strategy is a
+  deterministic, non-ML "summary": nothing is generated, only selected.
+
+```js
+import { buildContextPack, tailTruncate } from './src/index.js';
+
+const pack = buildContextPack(files, 'authentication', 500, { truncate: tailTruncate });
+```
 
 ## Status
 
@@ -77,10 +93,10 @@ gated on passing tests - every change here was verified by a real test run
 before being committed, including a golden-file test that pins the exact
 score/allocation output for a fixture repository (`fixtures/sample-repo/`).
 
-This covers the core score+allocate algorithm and the heuristic relevance
-scorer (keywords, imports, recency). Discovering files from a real
-filesystem, CLI/config surface, and additional truncation strategies are not
-implemented yet.
+This covers the core score+allocate algorithm, the heuristic relevance
+scorer (keywords, imports, recency), and pluggable truncation (head/tail/
+summary). Discovering files from a real filesystem and a CLI/config surface
+are not implemented yet.
 
 ## Design notes
 
