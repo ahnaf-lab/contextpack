@@ -1,0 +1,39 @@
+{
+  "query": "authentication login session",
+  "budget": 140,
+  "included": [
+    {
+      "path": "src/auth/login.js",
+      "content": "// Handles user login and authentication.\nexport function login(username, password) {\n  if (!username || !password) {\n    throw new Error('login requires a username and password');\n  }\n  const session = createSession(username);\n  return { username, session, authenticated: true };\n}\n\nexport function logout(session) {\n  session.authenticated = false;\n  return session;\n}\n\nfunction createSession(username) {\n  return { id: `${username}-session`, createdAt: 0 };\n}\n",
+      "tokens": 116,
+      "truncated": false,
+      "score": 34.333333333333336
+    },
+    {
+      "path": "src/auth/session.js",
+      "content": "// Session token management for authenticated users.\nexport function createToken(session) {\n  re",
+      "tokens": 24,
+      "truncated": true,
+      "score": 28.333333333333332
+    }
+  ],
+  "excluded": [
+    {
+      "path": "README.md",
+      "reason": "budget exhausted"
+    },
+    {
+      "path": "src/payments/invoice.js",
+      "reason": "budget exhausted"
+    },
+    {
+      "path": "src/utils/logger.js",
+      "reason": "budget exhausted"
+    },
+    {
+      "path": "package.json",
+      "reason": "budget exhausted"
+    }
+  ],
+  "remaining": 0
+}

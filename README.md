@@ -1,0 +1,74 @@
+# contextpack
+
+A zero-dependency Node library that transforms a codebase into a
+token-budgeted context bundle for LLM prompts, using deterministic relevance
+scoring and pluggable truncation strategies instead of ad-hoc globbing. For
+engineers building RAG or agent pipelines who need to know exactly *why* a
+file was included, excluded, or cut.
+
+This first milestone implements the core algorithm: score every candidate
+file against a query, then greedily allocate a fixed token budget across
+them, truncating or excluding files as the budget runs out. Everything is a
+pure function of its inputs, verified against a golden-file fixture so the
+output for a given file set, query, and budget never silently drifts.
+
+## Install
+
+```bash
+npm install
+```
+
+(No runtime dependencies are installed - contextpack has none. `npm install`
+just sets up the local dev environment for running tests.)
+
+## Usage
+
+```js
+import { buildContextPack } from './src/index.js';
+
+const files = [
+  { path: 'src/auth/login.js', content: '...' },
+  { path: 'src/utils/logger.js', content: '...' },
+];
+
+const pack = buildContextPack(files, 'authentication login', /* budgetTokens */ 500);
+
+console.log(pack.included); // [{ path, content, tokens, truncated, score }, ...]
+console.log(pack.excluded); // [{ path, reason }, ...]
+console.log(pack.remaining); // unused tokens left in the budget
+```
+
+`buildContextPack(files, query, budgetTokens, options?)`:
+
+1. Scores each file with `scoreFile` - path matches count more than content
+   matches, and shallower files win small ties (see `src/score.js`).
+2. Sorts files by descending score, breaking ties by path for a fully
+   deterministic order.
+3. Greedily allocates the token budget (`src/allocate.js`): a file is
+   included whole if it fits, truncated if the remaining budget is still
+   large enough to be useful, or excluded with a stated `reason` otherwise.
+
+Truncation is pluggable - pass `{ truncate: (content, maxTokens) => ({ content, tokens }) }`
+to use a different strategy than the default `headTruncate` (keep the start
+of the file, drop the rest).
+
+## Status
+
+Built autonomously with [Claude Code](https://claude.com/claude-code) and
+gated on passing tests - every change here was verified by a real test run
+before being committed, including a golden-file test that pins the exact
+score/allocation output for a fixture repository (`fixtures/sample-repo/`).
+
+This milestone covers only the core score+allocate algorithm. Discovering
+files from a real filesystem, CLI/config surface, and additional truncation
+strategies are not implemented yet.
+
+## Design notes
+
+- **Token estimation is approximate, on purpose.** `estimateTokens` uses a
+  chars/4 heuristic rather than a model-specific tokenizer, so the whole
+  library stays dependency-free and isn't tied to one vendor's encoding. It
+  is deterministic and consistent, which is what the allocation algorithm
+  needs - not perfect precision.
+- **No dependencies.** Everything here (scoring, allocation, truncation,
+  fixture loading) is built on Node's standard library.
