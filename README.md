@@ -6,11 +6,17 @@ scoring and pluggable truncation strategies instead of ad-hoc globbing. For
 engineers building RAG or agent pipelines who need to know exactly *why* a
 file was included, excluded, or cut.
 
-This first milestone implements the core algorithm: score every candidate
-file against a query, then greedily allocate a fixed token budget across
-them, truncating or excluding files as the budget runs out. Everything is a
-pure function of its inputs, verified against a golden-file fixture so the
-output for a given file set, query, and budget never silently drifts.
+The core algorithm: score every candidate file against a query, then
+greedily allocate a fixed token budget across them, truncating or excluding
+files as the budget runs out. Everything is a pure function of its inputs,
+verified against a golden-file fixture so the output for a given file set,
+query, and budget never silently drifts.
+
+Scoring is a heuristic blend of three signals: keyword matches (path and
+content), one-hop import propagation (a file another relevant file imports
+inherits some of that relevance, even with no keyword match of its own), and
+relative recency (an optional, caller-supplied `modifiedAt` per file). See
+`## Usage` and `src/score.js` for how each is weighted.
 
 ## Install
 
@@ -27,8 +33,8 @@ just sets up the local dev environment for running tests.)
 import { buildContextPack } from './src/index.js';
 
 const files = [
-  { path: 'src/auth/login.js', content: '...' },
-  { path: 'src/utils/logger.js', content: '...' },
+  { path: 'src/auth/login.js', content: '...', modifiedAt: 1723680000000 },
+  { path: 'src/utils/logger.js', content: '...' }, // modifiedAt is optional
 ];
 
 const pack = buildContextPack(files, 'authentication login', /* budgetTokens */ 500);
@@ -40,8 +46,20 @@ console.log(pack.remaining); // unused tokens left in the budget
 
 `buildContextPack(files, query, budgetTokens, options?)`:
 
-1. Scores each file with `scoreFile` - path matches count more than content
-   matches, and shallower files win small ties (see `src/score.js`).
+1. Scores each file with `scoreRepo` (`src/score.js`), which combines:
+   - **Keywords** (`scoreFile`) - path matches count more than content
+     matches, and shallower files win small ties.
+   - **Imports** (`src/imports.js`) - relative `import`/`export ... from`/
+     `require` specifiers are resolved against the candidate file set into a
+     graph; a file imported by a relevant file inherits a fraction of that
+     relevance, even with no keyword match of its own. Only one hop
+     propagates, so relevance can't leak through a long incidental chain.
+   - **Recency** - if a file supplies `modifiedAt` (an epoch-ms number from
+     the caller, e.g. a `git log` or `fs.stat` timestamp - contextpack reads
+     neither itself), the most recently modified file in the *given* set
+     gets a small, capped bonus over the oldest. Recency is relative to the
+     batch, not wall-clock time, so scoring stays deterministic. Omitting
+     `modifiedAt` disables the signal entirely (bonus 0).
 2. Sorts files by descending score, breaking ties by path for a fully
    deterministic order.
 3. Greedily allocates the token budget (`src/allocate.js`): a file is
@@ -59,9 +77,10 @@ gated on passing tests - every change here was verified by a real test run
 before being committed, including a golden-file test that pins the exact
 score/allocation output for a fixture repository (`fixtures/sample-repo/`).
 
-This milestone covers only the core score+allocate algorithm. Discovering
-files from a real filesystem, CLI/config surface, and additional truncation
-strategies are not implemented yet.
+This covers the core score+allocate algorithm and the heuristic relevance
+scorer (keywords, imports, recency). Discovering files from a real
+filesystem, CLI/config surface, and additional truncation strategies are not
+implemented yet.
 
 ## Design notes
 

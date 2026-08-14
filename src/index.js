@@ -1,16 +1,18 @@
-import { scoreFile, normalizeQuery } from './score.js';
+import { scoreFile, scoreRepo, normalizeQuery } from './score.js';
 import { allocate } from './allocate.js';
 import { estimateTokens } from './tokenize.js';
 
-export { scoreFile, normalizeQuery } from './score.js';
+export { scoreFile, scoreRepo, normalizeQuery } from './score.js';
 export { allocate, headTruncate } from './allocate.js';
 export { estimateTokens } from './tokenize.js';
+export { extractImportSpecifiers, resolveImportPath, buildImportGraph } from './imports.js';
 
 /**
- * Score a set of files against a query, then greedily allocate a token
- * budget across them - the core algorithm this package exists for.
+ * Score a set of files against a query (keywords + import graph + relative
+ * recency, see `scoreRepo`), then greedily allocate a token budget across
+ * them - the core algorithm this package exists for.
  *
- * @param {{path: string, content: string}[]} files
+ * @param {{path: string, content: string, modifiedAt?: number}[]} files
  * @param {string} query - free-text description of what the prompt needs
  * @param {number} budgetTokens
  * @param {object} [options] - forwarded to allocate()
@@ -18,10 +20,7 @@ export { estimateTokens } from './tokenize.js';
  */
 export function buildContextPack(files, query, budgetTokens, options = {}) {
   const queryTerms = normalizeQuery(query);
-  const scored = files.map((file) => ({
-    ...file,
-    score: scoreFile(file, queryTerms),
-  }));
+  const scored = scoreRepo(files, queryTerms);
 
   const { included, excluded, budget, remaining } = allocate(scored, budgetTokens, options);
 

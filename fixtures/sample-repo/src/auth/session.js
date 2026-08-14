@@ -1,4 +1,8 @@
 // Session token management for authenticated users.
+export function createSession(username) {
+  return { id: `${username}-session`, createdAt: 0 };
+}
+
 export function createToken(session) {
   return `token-${session.id}`;
 }

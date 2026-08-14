@@ -3,18 +3,18 @@
   "budget": 140,
   "included": [
     {
-      "path": "src/auth/login.js",
-      "content": "// Handles user login and authentication.\nexport function login(username, password) {\n  if (!username || !password) {\n    throw new Error('login requires a username and password');\n  }\n  const session = createSession(username);\n  return { username, session, authenticated: true };\n}\n\nexport function logout(session) {\n  session.authenticated = false;\n  return session;\n}\n\nfunction createSession(username) {\n  return { id: `${username}-session`, createdAt: 0 };\n}\n",
-      "tokens": 116,
+      "path": "src/auth/session.js",
+      "content": "// Session token management for authenticated users.\nexport function createSession(username) {\n  return { id: `${username}-session`, createdAt: 0 };\n}\n\nexport function createToken(session) {\n  return `token-${session.id}`;\n}\n\nexport function verifyToken(token, session) {\n  return token === `token-${session.id}`;\n}\n\nexport function refreshSession(session) {\n  return { ...session, createdAt: session.createdAt + 1 };\n}\n",
+      "tokens": 105,
       "truncated": false,
-      "score": 34.333333333333336
+      "score": 42.53333333333333
     },
     {
-      "path": "src/auth/session.js",
-      "content": "// Session token management for authenticated users.\nexport function createToken(session) {\n  re",
-      "tokens": 24,
+      "path": "src/auth/login.js",
+      "content": "// Handles user login and authentication.\nimport { createSession } from './session.js';\n\nexport function login(username, password) {\n  if (!",
+      "tokens": 35,
       "truncated": true,
-      "score": 28.333333333333332
+      "score": 34.333333333333336
     }
   ],
   "excluded": [
