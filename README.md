@@ -66,6 +66,26 @@ console.log(pack.remaining); // unused tokens left in the budget
    included whole if it fits, truncated if the remaining budget is still
    large enough to be useful, or excluded with a stated `reason` otherwise.
 
+Edge cases are handled explicitly, not left to whatever happens to fall out:
+
+- **Binary files** - a file whose content looks binary (`isBinaryContent`,
+  `src/binary.js`) is filtered out before scoring and reported in `excluded`
+  with reason `'binary file'`, the same way a budget-excluded file is.
+  Scoring keywords against raw bytes is meaningless, and it keeps a
+  multi-byte character from being split mid-sequence by a truncation
+  strategy. Detection follows the same heuristic git uses: a NUL byte
+  anywhere in a leading sample of the content.
+- **Empty input** - an empty file list, or a zero/negative/empty query,
+  never throws; `buildContextPack` returns `{ included: [], excluded: [] }`
+  (or excludes every file with reason `'budget exhausted'` for a
+  non-positive budget) rather than crashing on empty arrays or maps.
+- **Budget overflow** - a budget far larger than the total content spends
+  exactly what's needed and reports the true leftover in `remaining`; a
+  budget of zero or below excludes every file cleanly instead of allocating
+  negative space. `allocate` never reports `remaining < 0` or spends more
+  tokens than the budget it was given. See `test/edge-cases.test.js` for the
+  regression coverage of all of the above.
+
 Truncation is pluggable - pass `{ truncate: (content, maxTokens) => ({ content, tokens }) }`
 to `buildContextPack`'s `options` (or `allocate` directly) to use a different
 strategy than the default. `src/truncate.js` ships three, each unit-tested
@@ -120,6 +140,9 @@ Everything below is exported from `src/index.js`:
 - `estimateTokens(text)` / `tokenCount(text)` - the token estimator
   `allocate` and the truncation strategies use internally (both names refer
   to the same function; `tokenCount` is the public-facing alias).
+- `isBinaryContent(content)` - the binary-file detector `buildContextPack`
+  uses internally to exclude non-text files before scoring; see
+  `## Design notes` above.
 
 ## Status
 
@@ -130,9 +153,10 @@ score/allocation output for a fixture repository (`fixtures/sample-repo/`).
 
 This covers the core score+allocate algorithm, the heuristic relevance
 scorer (keywords, imports, recency), pluggable truncation (head/tail/
-summary), and a stable public API with a runnable, filesystem-backed example
-(`examples/basic.js`, see `## Example`). A CLI/config surface is not
-implemented yet.
+summary), a stable public API with a runnable, filesystem-backed example
+(`examples/basic.js`, see `## Example`), and edge-case handling for binary
+files, empty input, and budget overflow (`test/edge-cases.test.js`). A
+CLI/config surface is not implemented yet.
 
 ## Design notes
 
