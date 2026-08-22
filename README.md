@@ -146,7 +146,7 @@ Everything below is exported from `src/index.js`:
 
 ## Status
 
-Built autonomously with [Claude Code](https://claude.com/claude-code) and
+Built autonomously and
 gated on passing tests - every change here was verified by a real test run
 before being committed, including a golden-file test that pins the exact
 score/allocation output for a fixture repository (`fixtures/sample-repo/`).
